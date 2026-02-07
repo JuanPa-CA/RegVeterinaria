@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitalPet - Administrador de Citas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+        
+        .modal-scroll { max-height: 90vh; overflow-y: auto; }
+        .img-mascota { object-fit: cover; width: 100%; height: 100%; border-radius: 1rem; }
+        #contenedorCitas { 
+            display: grid;
+            grid-template-columns: 1fr; 
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 640px) { #contenedorCitas { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 1024px) { #contenedorCitas { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 1536px) { #contenedorCitas { grid-template-columns: repeat(4, 1fr); } }
+
+        textarea { resize: none; overflow: hidden; transition: height 0.2s ease; }
+        .truncate-custom { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col font-sans text-slate-900">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm h-20 md:h-24 flex items-center">
+        <div class="container mx-auto px-4 md:px-8 flex justify-between items-center h-full gap-4">
+            <div class="hidden sm:block flex-shrink-0">
+                <img src="./img/logo.png" alt="VitalPet Logo" class="h-20 sm:h-20 md:h-32 w-auto object-contain transition-transform hover:scale-105" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2138/2138440.png';">
+            </div>
+
+            <div class="flex-grow sm:flex-grow-0">
+                <h1 class="text-slate-800 font-black uppercase tracking-tighter text-sm min-[400px]:text-base md:text-xl">
+                    Administrador de <span class="text-emerald-600">Citas</span>
+                </h1>
+            </div>
+
+            <button id="btnAgregar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-lg transition-all active:scale-95 flex items-center gap-2 text-[10px] sm:text-xs shrink-0">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> 
+                <span class="hidden min-[380px]:inline">NUEVA CITA</span>
+                <span class="inline min-[380px]:hidden">NUEVA</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="container mx-auto mt-6 px-4 md:px-8">
+        <div class="w-full sm:max-w-xs">
+            <label class="block text-slate-500 text-[10px] font-bold uppercase mb-1.5 flex items-center gap-2">
+                <i data-lucide="filter" class="w-3 h-3"></i> Filtrar por estado
+            </label>
+            <select id="filtroEstado" class="w-full border border-slate-200 p-2.5 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer text-slate-700 font-bold text-sm">
+                <option value="Todas">Ver Todas</option>
+                <option value="Abierta" selected>Abiertas</option>
+                <option value="Terminada">Terminadas</option>
+                <option value="Anulada">Anuladas</option>
+            </select>
+        </div>
+    </div>
+
+    <main class="container mx-auto mt-8 px-4 md:px-8 flex-grow mb-12">
+        <div id="contenedorCitas"></div>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 text-center py-6 mt-auto">
+        <p class="text-xs font-medium italic">"Veterinaria VitalPet" &copy; 2026</p>
+    </footer>
+
+    <div id="modalFormulario" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center z-50 backdrop-blur-md p-2 sm:p-4">
+        <div class="bg-white p-5 sm:p-8 rounded-3xl shadow-2xl w-full max-w-lg mx-auto modal-scroll border border-slate-100">
+            <h3 id="modalTitulo" class="text-xl font-black mb-6 text-slate-800 flex items-center gap-2"></h3>
+            
+            <form id="formularioCita" class="space-y-4" novalidate>
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Tipo Mascota</label>
+                        <select id="tipoMascota" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none">
+                            <option value="perro">Perro</option>
+                            <option value="gato">Gato</option>
+                            <option value="ave">Ave</option>
+                            <option value="conejo">Conejo</option>
+                            <option value="hamster">Hámster</option>
+                            <option value="huron">Hurón</option>
+                            <option value="tortuga">Tortuga</option>
+                            <option value="iguana">Iguana</option>
+                            <option value="cerdo">Cerdo Mini</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nombre Mascota</label>
+                        <input type="text" id="mascota" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none" placeholder="Ej: Toby">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Propietario</label>
+                        <input type="text" id="propietario" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none" placeholder="Nombre dueño">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Teléfono</label>
+                        <input type="tel" id="telefono" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none" placeholder="600000000">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Fecha</label>
+                        <input type="date" id="fecha" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Hora (08:00 - 20:00)</label>
+                        <input type="time" id="hora" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-[10px] font-bold uppercase text-emerald-600">Síntomas</label>
+                        <span id="charCount" class="text-[15px] font-bold text-slate-400">0/250</span>
+                    </div>
+                    <textarea id="sintomas" maxlength="250" class="w-full border-slate-200 border p-2.5 rounded-xl bg-slate-50 text-sm focus:border-emerald-500 outline-none" rows="3" placeholder="Describe los síntomas..."></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="cerrarFormulario()" class="px-5 py-2 text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors">Cancelar</button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md transition-all">Guardar Cita</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'citas_vet';
+        const IMAGENES_MASCOTAS = { 
+            perro: './img/perro.jpg', gato: './img/gato.jpg', ave: './img/ave.jpg', conejo: './img/conejo.jpg', 
+            hamster: './img/hamster.jpg', huron: './img/huron.jpg', tortuga: './img/tortuga.jpg', 
+            iguana: './img/iguana.jpg', cerdo: './img/cerdo.jpg', otro: './img/huellas.png' 
+        };
+        const ESTADOS = {
+            Abierta: { bg: 'bg-emerald-50', border: 'border-emerald-200', marker: 'bg-emerald-500' },
+            Terminada: { bg: 'bg-blue-50', border: 'border-blue-200', marker: 'bg-blue-500' },
+            Anulada: { bg: 'bg-red-50', border: 'border-red-200', marker: 'bg-red-500' }
+        };
+
+        const TOAST = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+        let citas = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        console.log(citas);
+        
+
+        const ui = {
+            contenedor: document.getElementById('contenedorCitas'),
+            formulario: document.getElementById('formularioCita'),
+            filtro: document.getElementById('filtroEstado'),
+            modal: document.getElementById('modalFormulario'),
+            tituloModal: document.getElementById('modalTitulo'),
+            sintomas: document.getElementById('sintomas'),
+            charCount: document.getElementById('charCount'),
+            inputFecha: document.getElementById('fecha')
+        };
+
+        const hoy = new Date().toISOString().split('T')[0];
+        ui.inputFecha.min = hoy;
+
+        ui.sintomas.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            ui.charCount.innerText = `${this.value.length}/250`;
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarCitas();
+            lucide.createIcons();
+        });
+
+        ui.filtro.addEventListener('change', renderizarCitas);
+        document.getElementById('btnAgregar').onclick = () => abrirFormulario();
+        ui.formulario.onsubmit = (e) => manejarEnvioFormulario(e);
+
+        function manejarEnvioFormulario(e) {
+            e.preventDefault();
+            const fields = [
+                { id: 'mascota', label: 'Nombre de la Mascota' },
+                { id: 'propietario', label: 'Propietario' },
+                { id: 'telefono', label: 'Teléfono' },
+                { id: 'fecha', label: 'Fecha' },
+                { id: 'hora', label: 'Hora' },
+                { id: 'sintomas', label: 'Síntomas' }
+            ];
+
+            for (const field of fields) {
+                const val = document.getElementById(field.id).value.trim();
+                if (val === '') {
+                    return Swal.fire({ 
+                        icon: 'warning', 
+                        title: 'Campo incompleto', 
+                        text: `Debes llenar el campo: ${field.label}`,
+                        confirmButtonColor: '#10b981'
+                    });
+                }
+            }
+
+            const horaSeleccionada = document.getElementById('hora').value;
+            if (horaSeleccionada < "08:00" || horaSeleccionada > "20:00") {
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Horario no disponible',
+                    text: 'Las citas deben programarse entre las 08:00 AM y las 08:00 PM',
+                    confirmButtonColor: '#10b981'
+                });
+            }
+
+            const id = document.getElementById('editId').value;
+            const nuevaCita = { 
+                mascota: document.getElementById('mascota').value.trim(),
+                propietario: document.getElementById('propietario').value.trim(),
+                telefono: document.getElementById('telefono').value.trim(),
+                fecha: document.getElementById('fecha').value,
+                hora: horaSeleccionada,
+                sintomas: ui.sintomas.value.trim(),
+                id: id ? parseInt(id) : Date.now(), 
+                tipo: document.getElementById('tipoMascota').value, 
+                estado: id ? (citas.find(c => c.id == id).estado) : 'Abierta',
+                motivoAnulacion: id ? (citas.find(c => c.id == id).motivoAnulacion || '') : ''
+            };
+            
+            id ? (citas = citas.map(c => c.id == id ? nuevaCita : c)) : citas.push(nuevaCita);
+            actualizarApp(); 
+            cerrarFormulario();
+            TOAST.fire({ icon: 'success', title: 'Cita guardada correctamente' });
+        }
+
+        function renderizarCitas() {
+            ui.contenedor.innerHTML = '';
+            const filtradas = ui.filtro.value === 'Todas' ? citas : citas.filter(c => c.estado === ui.filtro.value);
+            if (filtradas.length === 0) return mostrarEstadoVacio();
+            filtradas.forEach(cita => ui.contenedor.appendChild(crearCardCita(cita)));
+            lucide.createIcons();
+        }
+
+        function crearCardCita(cita) {
+            const { id, mascota, propietario, telefono, fecha, hora, sintomas, tipo, estado, motivoAnulacion } = cita;
+            const estilo = ESTADOS[estado];
+            const card = document.createElement('div');
+            
+            const textoCorto = sintomas.length > 25 ? sintomas.substring(0, 25) + '...' : sintomas;
+            const btnVerMas = `<button onclick="verMas('${mascota}', '${sintomas.replace(/'/g, "\\'")}')" class="text-emerald-600 font-bold text-[10px] underline ml-1">Ver detalles</button>`;
+
+            const isLocked = estado === 'Terminada' || estado === 'Anulada';
+
+            card.className = `${estilo.bg} ${estilo.border} p-5 rounded-2xl shadow-sm border-2 relative fade-in h-full flex flex-col transition-all hover:shadow-md`;
+            card.innerHTML = `
+                <div class="absolute -top-6 right-4 w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl flex items-center justify-center shadow-lg border border-slate-100 overflow-hidden z-10">
+                    <img src="${IMAGENES_MASCOTAS[tipo] || IMAGENES_MASCOTAS.otro}" class="img-mascota" alt="${tipo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2138/2138440.png';">
+                </div>
+                
+                <div class="mb-4">
+                    <span class="px-2 py-0.5 bg-white text-slate-400 rounded-full text-[12px] font-bold border">REF: ${id.toString().slice(-6)}</span>
+                    <h2 class="text-xl font-black text-slate-800 mt-2 capitalize truncate pr-14 sm:pr-16">${mascota}</h2>
+                </div>
+                
+                <div class="space-y-3 text-sm flex-grow">
+                    <div class="flex items-center gap-3 text-slate-600">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0"><i data-lucide="user" class="w-4 h-4"></i></span>
+                        <p class="truncate font-semibold">${propietario}</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-slate-600">
+                        <span class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0"><i data-lucide="phone" class="w-4 h-4"></i></span>
+                        <p class="font-bold">${telefono}</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-slate-600">
+                        <span class="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0"><i data-lucide="calendar" class="w-4 h-4"></i></span>
+                        <p class="font-bold">${fecha} <span class="text-slate-400 font-medium text-xs">| ${hora}</span></p>
+                    </div>
+                    
+                    <div class="mt-4">
+                         <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Síntomas</span>
+                         <div class="p-3 bg-white/70 rounded-xl text-slate-500 italic border-l-4 ${estilo.marker.replace('bg-', 'border-')} text-xs leading-relaxed shadow-inner">
+                            <span class="truncate-custom inline">"${textoCorto}"</span>${btnVerMas}
+                        </div>
+                    </div>
+
+                    ${estado === 'Anulada' && motivoAnulacion ? `
+                    <div class="mt-2">
+                        <span class="text-[9px] font-bold text-red-400 uppercase tracking-widest block mb-1">Motivo Anulación</span>
+                        <p class="text-xs text-red-600 font-medium italic bg-red-100/50 p-2 rounded-lg">${motivoAnulacion}</p>
+                    </div>` : ''}
+                </div>
+
+                <div class="mt-5 flex items-center justify-between gap-2">
+                    <select ${isLocked ? 'disabled' : ''} onchange="confirmarCambioEstado(${id}, this.value, '${estado}')" class="flex-grow text-[10px] font-bold border-none bg-white p-2 rounded-lg outline-none cursor-pointer uppercase shadow-sm ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <option value="Abierta" ${estado === 'Abierta' ? 'selected' : ''}>Abierta</option>
+                        <option value="Terminada" ${estado === 'Terminada' ? 'selected' : ''}>Terminada</option>
+                        <option value="Anulada" ${estado === 'Anulada' ? 'selected' : ''}>Anulada</option>
+                    </select>
+                    <div class="flex gap-1.5">
+                        <button onclick="abrirFormulario(${id})" class="w-9 h-9 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                        <button onclick="confirmarEliminar(${id})" class="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </div>`;
+            return card;
+        }
+
+        async function confirmarCambioEstado(id, nuevoEstado, estadoAnterior) {
+            if (nuevoEstado === estadoAnterior) return;
+
+            // Lógica para Anulación
+            let motivo = "";
+            if (nuevoEstado === 'Anulada') {
+                const { value: text, isConfirmed } = await Swal.fire({
+                    title: 'Motivo de Anulación',
+                    input: 'textarea',
+                    inputLabel: '¿Por qué se anula la cita?',
+                    inputPlaceholder: 'Escribe el motivo aquí...',
+                    inputAttributes: { 'aria-label': 'Escribe el motivo aquí' },
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Confirmar Anulación',
+                    cancelButtonText: 'Volver',
+                    inputValidator: (value) => {
+                        if (!value) return '¡Debes ingresar un motivo!';
+                    }
+                });
+
+                if (!isConfirmed) {
+                    renderizarCitas();
+                    return;
+                }
+                motivo = text;
+            } else {
+                // Confirmación normal para otros estados
+                const result = await Swal.fire({
+                    title: '¿Cambiar estado?',
+                    text: `La cita pasará a "${nuevoEstado.toUpperCase()}"`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981',
+                    confirmButtonText: 'Sí, cambiar',
+                    cancelButtonText: 'No'
+                });
+
+                if (!result.isConfirmed) {
+                    renderizarCitas();
+                    return;
+                }
+            }
+
+            // Actualizar datos
+            citas = citas.map(c => {
+                if (c.id === id) {
+                    return { ...c, estado: nuevoEstado, motivoAnulacion: nuevoEstado === 'Anulada' ? motivo : '' };
+                }
+                return c;
+            });
+            
+            actualizarApp();
+            TOAST.fire({ icon: 'success', title: `Estado actualizado` });
+        }
+
+        function abrirFormulario(id = null) {
+            ui.modal.classList.remove('hidden');
+            if (id) {
+                const c = citas.find(c => c.id === id);
+                ui.tituloModal.innerText = 'Editar Cita';
+                document.getElementById('editId').value = c.id;
+                document.getElementById('tipoMascota').value = c.tipo;
+                document.getElementById('mascota').value = c.mascota;
+                document.getElementById('propietario').value = c.propietario;
+                document.getElementById('telefono').value = c.telefono;
+                document.getElementById('fecha').value = c.fecha;
+                document.getElementById('hora').value = c.hora;
+                ui.sintomas.value = c.sintomas;
+            } else {
+                ui.tituloModal.innerText = 'Nueva Cita';
+                ui.formulario.reset(); 
+                document.getElementById('editId').value = '';
+            }
+            ui.sintomas.dispatchEvent(new Event('input'));
+        }
+
+        function cerrarFormulario() { ui.modal.classList.add('hidden'); }
+        
+        function confirmarEliminar(id) {
+            Swal.fire({ 
+                title: '¿Estás seguro?', 
+                text: "Esta acción no se puede deshacer.",
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#ef4444', 
+                confirmButtonText: 'Sí, eliminar cita',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) { 
+                    citas = citas.filter(c => c.id !== id); 
+                    actualizarApp(); 
+                    TOAST.fire({ icon: 'info', title: 'Cita eliminada' });
+                }
+            });
+        }
+
+        function verMas(nombre, texto) {
+            Swal.fire({ 
+                title: `<div class="text-emerald-600 flex items-center justify-center gap-2">
+                            <i data-lucide="stethoscope"></i> Síntomas de ${nombre}
+                        </div>`,
+                html: `<div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-200 italic text-slate-700 leading-relaxed shadow-inner">
+                        "${texto}"
+                       </div>`,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Entendido',
+                didOpen: () => { lucide.createIcons(); }
+            });
+        }
+
+        function mostrarEstadoVacio() {
+            ui.contenedor.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-20 px-4 text-center fade-in">
+                    <div class="bg-emerald-50 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-6 animate-bounce shadow-inner border border-emerald-100">
+                        <i data-lucide="calendar-days" class="w-10 h-10 sm:w-12 sm:h-12 text-emerald-500"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800 mb-2">No hay citas registradas</h3>
+                    <button onclick="abrirFormulario()" class="mt-4 bg-emerald-600 text-white font-bold py-2 px-6 rounded-2xl">Crear primera cita</button>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        function actualizarApp() { 
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(citas)); 
+            renderizarCitas(); 
+        }
+    </script>
+</body>
+</html>
