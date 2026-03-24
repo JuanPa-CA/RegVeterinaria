@@ -1,5 +1,3 @@
-console.log('script.js cargado correctamente');
-
 const STORAGE_KEY = 'citas_vet';
 
 const IMAGENES_MASCOTAS = { 
@@ -47,14 +45,12 @@ const nodos = {
 
 // --- Auxiliares de Modal y Estado ---
 function cerrarFormulario() { 
-    console.log('Cerrando formulario...');
     if (nodos.modal) nodos.modal.classList.add('hidden'); 
 }
 window.cerrarFormulario = cerrarFormulario;
 
 // --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM cargado');
     // Bloquear fechas pasadas
     if (nodos.inputFecha) {
         nodos.inputFecha.min = new Date().toISOString().split('T')[0];
