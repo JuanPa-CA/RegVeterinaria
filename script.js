@@ -1,3 +1,5 @@
+console.log('script.js cargado correctamente');
+
 const STORAGE_KEY = 'citas_vet';
 
 const IMAGENES_MASCOTAS = { 
@@ -43,8 +45,16 @@ const nodos = {
     editId:      document.getElementById('editId')
 };
 
+// --- Auxiliares de Modal y Estado ---
+function cerrarFormulario() { 
+    console.log('Cerrando formulario...');
+    if (nodos.modal) nodos.modal.classList.add('hidden'); 
+}
+window.cerrarFormulario = cerrarFormulario;
+
 // --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM cargado');
     // Bloquear fechas pasadas
     if (nodos.inputFecha) {
         nodos.inputFecha.min = new Date().toISOString().split('T')[0];
@@ -60,7 +70,7 @@ function inicializarEventos() {
         nodos.sintomas.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = `${this.scrollHeight}px`;
-            nodos.charCount.innerText = `${this.value.length}/250`;
+            if (nodos.charCount) nodos.charCount.innerText = `${this.value.length}/250`;
         });
     }
 
@@ -75,7 +85,6 @@ function inicializarEventos() {
 function manejarEnvioFormulario(e) {
     e.preventDefault();
 
-    // Obtenemos los valores directamente por ID para asegurar compatibilidad si el HTML no tiene atributos 'name'
     const datos = {
         mascota:     document.getElementById('mascota').value.trim(),
         propietario: document.getElementById('propietario').value.trim(),
@@ -86,7 +95,6 @@ function manejarEnvioFormulario(e) {
         tipo:        document.getElementById('tipoMascota').value
     };
 
-    // Validación básica
     const camposRequeridos = [
         { valor: datos.mascota,     etiqueta: 'Nombre de la Mascota' },
         { valor: datos.propietario, etiqueta: 'Propietario' },
@@ -102,7 +110,6 @@ function manejarEnvioFormulario(e) {
         }
     }
 
-    // Validación de horario (08:00 - 20:00)
     if (datos.hora < "08:00" || datos.hora > "20:00") {
         return Swal.fire('Horario no válido', 'Atendemos de 08:00 AM a 08:00 PM', 'error');
     }
@@ -128,7 +135,6 @@ function manejarEnvioFormulario(e) {
     toast.fire({ icon: 'success', title: 'Cita guardada correctamente' });
 }
 
-// --- Renderizado de UI ---
 function renderizarApp() {
     if (!nodos.contenedor) return;
     nodos.contenedor.innerHTML = '';
@@ -146,7 +152,7 @@ function renderizarApp() {
         nodos.contenedor.appendChild(crearTarjetaCita(cita));
     });
     
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 }
 
 function crearTarjetaCita(cita) {
@@ -238,7 +244,6 @@ function crearTarjetaCita(cita) {
     return tarjeta;
 }
 
-// --- Acciones de Citas ---
 async function actualizarEstado(id, nuevoEstado, estadoAnterior) {
     if (nuevoEstado === estadoAnterior) return;
 
@@ -302,11 +307,10 @@ function mostrarSintomasCompletos(nombre, texto) {
                 </div>`,
         html: `<div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-200 italic text-slate-700 shadow-inner">"${texto}"</div>`,
         confirmButtonColor: '#10b981',
-        didOpen: () => lucide.createIcons()
+        didOpen: () => { if (window.lucide) lucide.createIcons(); }
     });
 }
 
-// --- Auxiliares de Modal y Estado ---
 function abrirModal(id = null) {
     if (!nodos.modal) return;
     nodos.modal.classList.remove('hidden');
@@ -316,7 +320,6 @@ function abrirModal(id = null) {
         nodos.tituloModal.innerText = 'Editar Cita';
         nodos.editId.value = c.id;
         
-        // Rellenar formulario
         const campos = ['mascota', 'propietario', 'telefono', 'fecha', 'hora', 'sintomas'];
         campos.forEach(f => {
             const el = document.getElementById(f);
@@ -326,17 +329,13 @@ function abrirModal(id = null) {
         if (tipoMascota) tipoMascota.value = c.tipo;
     } else {
         nodos.tituloModal.innerText = 'Nueva Cita';
-        nodos.formulario.reset();
+        if (nodos.formulario) nodos.formulario.reset();
         nodos.editId.value = '';
     }
     
     if (nodos.sintomas) {
         nodos.sintomas.dispatchEvent(new Event('input'));
     }
-}
-
-function cerrarFormulario() { 
-    if (nodos.modal) nodos.modal.classList.add('hidden'); 
 }
 
 function mostrarEstadoVacio() {
@@ -351,7 +350,7 @@ function mostrarEstadoVacio() {
                 Crear primera cita
             </button>
         </div>`;
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 }
 
 function guardarYRefrescar() { 
